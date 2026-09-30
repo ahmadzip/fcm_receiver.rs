@@ -38,6 +38,8 @@ pub struct FcmClient {
     pub android_id: u64,
     pub security_token: u64,
     pub heartbeat_interval: Duration,
+    pub heartbeat_ack_timeout: Duration,
+    debug: bool,
     pub on_data_message: Option<Arc<dyn Fn(Vec<u8>) + Send + Sync>>,
     pub on_raw_message: Option<Arc<dyn Fn(ManualDataMessageStanza) + Send + Sync>>,
     pub android_app: Option<AndroidApp>,
@@ -63,7 +65,9 @@ impl FcmClient {
             fcm_token: None,
             android_id: 0,
             security_token: 0,
-            heartbeat_interval: Duration::from_secs(600),
+            heartbeat_interval: Duration::from_secs(120),
+            heartbeat_ack_timeout: Duration::from_secs(30),
+            debug: false,
             on_data_message: None,
             on_raw_message: None,
             android_app: None,
@@ -93,7 +97,9 @@ impl FcmClient {
             fcm_token: None,
             android_id: 0,
             security_token: 0,
-            heartbeat_interval: Duration::from_secs(600),
+            heartbeat_interval: Duration::from_secs(120),
+            heartbeat_ack_timeout: Duration::from_secs(30),
+            debug: false,
             on_data_message: None,
             on_raw_message: None,
             android_app: None,
@@ -279,6 +285,10 @@ impl FcmClient {
         Ok(response.token)
     }
 
+    pub fn set_debug(&mut self, enabled: bool) {
+        self.debug = enabled;
+    }
+
     pub fn start_listening(&mut self) -> Result<()> {
         if self.android_id == 0 || self.security_token == 0 {
             return Err(Error::InvalidData("client's AndroidId and SecurityToken hasn't been set. use FcmClient.register() to generate a new AndroidId and SecurityToken"));
@@ -300,6 +310,8 @@ impl FcmClient {
 
         let mut socket_handler = SocketHandler::new();
         socket_handler.set_heartbeat_interval(self.heartbeat_interval);
+        socket_handler.set_heartbeat_ack_timeout(self.heartbeat_ack_timeout);
+        socket_handler.set_debug(self.debug);
 
         let on_data_message = self.on_data_message.clone();
         let on_raw_message = self.on_raw_message.clone();
